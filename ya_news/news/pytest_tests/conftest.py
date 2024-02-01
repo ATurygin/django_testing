@@ -68,14 +68,14 @@ def comment(news, author):
 
 @pytest.fixture
 def news_multiple_comments(news, author):
-    for index in range(2):
+    for index in range(10):
         now = timezone.now()
         comment = Comment.objects.create(
             author=author,
             news=news,
             text=f'Текст {index}'
         )
-        comment.created = now + timedelta(days=index)
+        comment.created = now - timedelta(days=index)
         comment.save()
     return news
 

@@ -27,7 +27,9 @@ def test_detail_page_comment_order(client, news_multiple_comments):
     assert 'news' in response.context
     news_obj = response.context['news']
     comment_set = news_obj.comment_set.all()
-    assert comment_set[0].created < comment_set[1].created
+    all_dates = [comment.created for comment in comment_set]
+    sorted_dates = sorted(all_dates)
+    assert all_dates == sorted_dates
 
 
 @pytest.mark.django_db

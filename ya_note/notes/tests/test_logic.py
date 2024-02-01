@@ -40,30 +40,33 @@ class TestNoteEditUpdate(TestCase):
             'slug': 'newNote',
         }
 
-    def test_anonymous_user_cannot_edit_notes(self):
-        response = self.client.post(self.edit_url, data=self.form_data)
-        redirect_url = f'{self.login_url}?next={self.edit_url}'
-        self.assertRedirects(response, redirect_url)
-        note_from_db = Note.objects.get(id=self.note.id)
-        self.assertEqual(note_from_db.title, self.note.title)
-        self.assertEqual(note_from_db.text, self.note.text)
-        self.assertEqual(note_from_db.slug, self.note.slug)
-
-    def test_author_can_edit_notes(self):
-        response = self.author_client.post(self.edit_url, data=self.form_data)
-        self.assertRedirects(response, self.success_url)
+    def note_compare_to_form_data(self):
         self.note.refresh_from_db()
         self.assertEqual(self.note.title, self.form_data['title'])
         self.assertEqual(self.note.text, self.form_data['text'])
         self.assertEqual(self.note.slug, self.form_data['slug'])
 
-    def test_user_cannot_edit_another_users_notes(self):
-        response = self.reader_client.post(self.edit_url, data=self.form_data)
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+    def note_compare_to_db(self):
         note_from_db = Note.objects.get(id=self.note.id)
         self.assertEqual(note_from_db.title, self.note.title)
         self.assertEqual(note_from_db.text, self.note.text)
         self.assertEqual(note_from_db.slug, self.note.slug)
+
+    def test_anonymous_user_cannot_edit_notes(self):
+        response = self.client.post(self.edit_url, data=self.form_data)
+        redirect_url = f'{self.login_url}?next={self.edit_url}'
+        self.assertRedirects(response, redirect_url)
+        self.note_compare_to_db()
+
+    def test_author_can_edit_notes(self):
+        response = self.author_client.post(self.edit_url, data=self.form_data)
+        self.assertRedirects(response, self.success_url)
+        self.note_compare_to_form_data()
+
+    def test_user_cannot_edit_another_users_notes(self):
+        response = self.reader_client.post(self.edit_url, data=self.form_data)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.note_compare_to_db()
 
     def test_anonymous_user_cannot_delete_notes(self):
         response = self.client.delete(self.delete_url)
@@ -126,11 +129,8 @@ class TestNoteAdd(TestCase):
         self.assertEqual(Note.objects.count(), 1)
 
     def test_empty_slug_handling(self):
-        data = {
-            'title': 'Заметка',
-            'text': 'Текст'
-        }
-        response = self.author_client.post(self.add_url, data=data)
+        self.form_data.pop('slug')
+        response = self.author_client.post(self.add_url, data=self.form_data)
         self.assertRedirects(response, self.success_url)
         note_count = Note.objects.count()
         self.assertEqual(note_count, 1)
